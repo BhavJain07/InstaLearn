@@ -1,30 +1,22 @@
 import streamlit as st
 from openai import OpenAI
-from llama_index import LlamaClient  # Replace with actual Llama SDK import
-from claude import ClaudeClient  # Replace with actual Claude SDK import
 from fpdf import FPDF
 import base64
 
 # Show title and description.
 st.title("Create Great Practice Questions booklets for any topic you want to learn!")
 st.write(
-    "This is a simple chatbot that uses AI models to generate responses. "
-    "To use this app, you need to provide an API key for OpenAI, Llama, or Claude."
+    "This is a simple chatbot that uses OpenAI's GPT-4 model to generate responses. "
+    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys)."
 )
 
-# Ask user for their API key via `st.text_input`.
-api_key = st.text_input("API Key", type="password")
+# Ask user for their OpenAI API key via `st.text_input`.
+api_key = st.text_input("OpenAI API Key", type="password")
 if not api_key:
-    st.info("Please add your API key to continue.", icon="🗝️")
+    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
-    # Create a client based on the selected model.
-    model = st.selectbox("Select Model", ["OpenAI", "Llama", "Claude"])
-    if model == "OpenAI":
-        client = OpenAI(api_key=api_key)
-    elif model == "Llama":
-        client = LlamaClient(api_key=api_key)  # Replace with actual Llama client initialization
-    elif model == "Claude":
-        client = ClaudeClient(api_key=api_key)  # Replace with actual Claude client initialization
+    # Create an OpenAI client.
+    client = OpenAI(api_key=api_key)
 
     # Create a session state variable to store the chat messages. This ensures that the
     # messages persist across reruns.
@@ -48,28 +40,15 @@ else:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate a response using the selected AI model.
-        if model == "OpenAI":
-            response = client.Completion.create(
-                model="gpt-4",
-                prompt=system_prompt + "\n" + "\n".join([m["content"] for m in st.session_state.messages]),
-                max_tokens=1500,
-                n=1,
-                stop=None,
-                temperature=0.7,
-            ).choices[0].text
-        elif model == "Llama":
-            response = client.generate(
-                prompt=system_prompt + "\n" + "\n".join([m["content"] for m in st.session_state.messages]),
-                max_tokens=1500,
-                temperature=0.7,
-            )
-        elif model == "Claude":
-            response = client.generate(
-                prompt=system_prompt + "\n" + "\n".join([m["content"] for m in st.session_state.messages]),
-                max_tokens=1500,
-                temperature=0.7,
-            )
+        # Generate a response using the OpenAI API.
+        response = client.Completion.create(
+            model="gpt-4",
+            prompt=system_prompt + "\n" + "\n".join([m["content"] for m in st.session_state.messages]),
+            max_tokens=4096,  # Max tokens for GPT-4
+            n=1,
+            stop=None,
+            temperature=0.7,
+        ).choices[0].text
 
         # Display the response and store it in session state.
         with st.chat_message("assistant"):

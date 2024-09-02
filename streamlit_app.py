@@ -15,7 +15,7 @@ api_key = st.text_input("OpenAI API Key", type="password")
 if not api_key:
     st.info("Please add your OpenAI API key to continue.", icon="🗝️")
 else:
-    # Create an OpenAI client.
+    # Initialize the OpenAI client
     client = OpenAI(api_key=api_key)
 
     # Create a session state variable to store the chat messages. This ensures that the
@@ -29,7 +29,7 @@ else:
             st.markdown(message["content"])
 
     # Hardcoded system prompt
-    system_prompt = "You are a helpful assistant that generates practice questions for any topic."
+    system_prompt = "You are a helpful assistant that generates practice questions for any topic. You are an expert in whichever field the question is regarding. The question booklets you output should be at least 10 pages long. They should have a mix of LaTeX formatted multiple choice and open response questions, and should have the answer key at the end. Above all ensure the questions are crafted so that the student has maximum mastery, ensure to add a lot of questions. for Math and other STEM topics, use markdown or latex to format equations and the questions themselves."
 
     # Create a chat input field to allow the user to enter a message. This will display
     # automatically at the bottom of the page.
@@ -41,33 +41,36 @@ else:
             st.markdown(prompt)
 
         # Generate a response using the OpenAI API.
-        response = client.Completion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
-            prompt=system_prompt + "\n" + "\n".join([m["content"] for m in st.session_state.messages]),
-            max_tokens=4096,  # Max tokens for GPT-4
-            n=1,
-            stop=None,
-            temperature=0.7,
-        ).choices[0].text
+            messages=[
+                {"role": "system", "content": system_prompt},
+                *st.session_state.messages,
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        # Extract the content from the response
+        response_content = response.choices[0].message.content
 
         # Display the response and store it in session state.
         with st.chat_message("assistant"):
-            st.markdown(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            st.markdown(response_content)
+        st.session_state.messages.append({"role": "assistant", "content": response_content})
 
         # Display the generated book content
         st.subheader("Generated Practice Questions Booklet")
-        st.markdown(response)
+        st.markdown(response_content)
 
         # Convert the response to PDF
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, response)
+        pdf.multi_cell(0, 10, response_content.encode('latin-1', 'replace').decode('latin-1'))
 
         # Save the PDF to a file
-        pdf_output = "practice_questions_booklet.pdf"
+        pdf_output = "practice_questions_booklet.md"
         pdf.output(pdf_output)
 
         # Provide a download link for the PDF
